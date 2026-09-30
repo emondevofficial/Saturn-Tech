@@ -1,0 +1,6 @@
+{
+  "name": "Saturn Tech BD",
+  "description": "Complete modern e-commerce platform and business management system for Saturn Tech BD, premier computer & electronics retailer in Bangladesh.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
