@@ -80,13 +80,26 @@ router.get('/', async (req: Request, res: Response) => {
 
     // Category filter
     if (category && category !== 'all') {
-      const catVal = category.toLowerCase();
-      list = list.filter((p) => p.categorySlug.toLowerCase() === catVal || p.category.toLowerCase() === catVal);
+      const catVal = category.toLowerCase().trim();
+      list = list.filter((p) => {
+        const cSlug = p.categorySlug.toLowerCase();
+        const cName = p.category.toLowerCase();
+        return (
+          cSlug === catVal ||
+          cName === catVal ||
+          (catVal === 'components' && cSlug === 'pc-components') ||
+          (catVal === 'pc-components' && cSlug === 'components') ||
+          (catVal === 'peripherals' && cSlug === 'accessories') ||
+          (catVal === 'accessories' && cSlug === 'peripherals') ||
+          (catVal === 'custom-pc' && cSlug === 'desktops') ||
+          (catVal === 'desktops' && (cSlug === 'custom-pc' || cSlug === 'desktops'))
+        );
+      });
     }
 
     // Brand filter
     if (brand && brand !== 'all') {
-      const brandVal = brand.toLowerCase();
+      const brandVal = brand.toLowerCase().trim();
       list = list.filter((p) => p.brandSlug.toLowerCase() === brandVal || p.brand.toLowerCase() === brandVal);
     }
 
@@ -190,11 +203,17 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     // Pagination
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.max(1, parseInt(limit, 10) || 12);
     const total = list.length;
-    const totalPages = Math.ceil(total / limitNum);
-    const paginatedItems = list.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+    let paginatedItems = list;
+    let pageNum = Math.max(1, parseInt(page, 10) || 1);
+    let limitNum = total;
+    let totalPages = 1;
+
+    if (limit && limit !== 'all' && limit !== '0' && limit !== '-1') {
+      limitNum = Math.max(1, parseInt(limit, 10) || 12);
+      totalPages = Math.ceil(total / limitNum);
+      paginatedItems = list.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+    }
 
     res.json({
       success: true,

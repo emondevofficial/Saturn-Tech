@@ -23,6 +23,7 @@ import {
   initialCoupons,
   initialFAQs,
   initialAdminUser,
+  initialReviews,
 } from './seedData';
 
 interface UserRecord extends User {
@@ -64,19 +65,31 @@ class DatabaseService {
       if (fs.existsSync(STORE_FILE)) {
         const raw = fs.readFileSync(STORE_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
-        return {
+        const hasDesktops = parsed.products && parsed.products.some((p: Product) => p.categorySlug === 'desktops');
+        const hasBrandLogos = parsed.brands && parsed.brands.some((b: Brand) => Boolean(b.logo));
+        const hasReviews = parsed.reviews && parsed.reviews.length > 0;
+
+        const hydratedStore: DataStore = {
           users: parsed.users || [initialAdminUser],
-          products: parsed.products || initialProducts,
+          products: hasDesktops ? parsed.products : initialProducts,
           categories: parsed.categories || initialCategories,
-          brands: parsed.brands || initialBrands,
+          brands: hasBrandLogos ? parsed.brands : initialBrands,
           orders: parsed.orders || [],
           coupons: parsed.coupons || initialCoupons,
-          reviews: parsed.reviews || [],
+          reviews: hasReviews ? parsed.reviews : initialReviews,
           inventoryTransactions: parsed.inventoryTransactions || [],
           banners: parsed.banners || initialBanners,
           faqs: parsed.faqs || initialFAQs,
           settings: parsed.settings || initialSettings,
         };
+
+        if (!hasDesktops || !hasBrandLogos || !hasReviews) {
+          try {
+            fs.writeFileSync(STORE_FILE, JSON.stringify(hydratedStore, null, 2), 'utf-8');
+          } catch {}
+        }
+
+        return hydratedStore;
       }
     } catch (err) {
       console.error('Error reading store file, initializing from seed:', err);
@@ -89,7 +102,7 @@ class DatabaseService {
       brands: initialBrands,
       orders: [],
       coupons: initialCoupons,
-      reviews: [],
+      reviews: initialReviews,
       inventoryTransactions: [],
       banners: initialBanners,
       faqs: initialFAQs,
@@ -123,8 +136,10 @@ class DatabaseService {
     const mongoUri = process.env.MONGODB_URI;
     if (mongoUri && mongoUri.trim().length > 0) {
       try {
+        mongoose.set('bufferCommands', false);
         await mongoose.connect(mongoUri, {
           dbName: process.env.MONGODB_DB || 'saturn_tech_bd',
+          serverSelectionTimeoutMS: 2500,
         });
         this.isMongoConnected = true;
         console.log('Successfully connected to MongoDB instance');

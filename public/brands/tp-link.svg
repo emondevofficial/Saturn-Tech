@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="100%" height="100%">
+  <rect width="160" height="50" rx="8" fill="#F8FAFC" />
+  <circle cx="34" cy="25" r="12" fill="#4ACBD6" />
+  <text x="96" y="32" font-family="'Segoe UI', Arial, sans-serif" font-size="16" font-weight="900" fill="#2C3E50" text-anchor="middle">tp-link</text>
+</svg>

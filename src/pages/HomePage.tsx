@@ -14,8 +14,10 @@ import {
   Award,
   Headphones,
   CheckCircle2,
+  Wifi,
+  Package,
 } from 'lucide-react';
-import { Product, Category, Banner, Brand, FAQ } from '../types';
+import { Product, Category, Banner, Brand, FAQ, Review } from '../types';
 import { ProductCard } from '../components/ProductCard';
 
 interface HomePageProps {
@@ -29,8 +31,11 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
   const [brands, setBrands] = useState<Brand[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<'all' | 'laptops' | 'components' | 'accessories'>('all');
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'laptops' | 'components' | 'monitors' | 'desktops' | 'accessories' | 'networking'
+  >('all');
   const [isLoading, setIsLoading] = useState(true);
 
   // Flash sale countdown timer simulation (7 days remaining)
@@ -56,18 +61,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/products').then((r) => r.json()),
+      fetch('/api/products?limit=all').then((r) => r.json()),
       fetch('/api/categories').then((r) => r.json()),
       fetch('/api/brands').then((r) => r.json()),
       fetch('/api/content/banners').then((r) => r.json()),
       fetch('/api/content/faqs').then((r) => r.json()),
+      fetch('/api/reviews?featured=true').then((r) => r.json()),
     ])
-      .then(([prodRes, catRes, brandRes, banRes, faqRes]) => {
+      .then(([prodRes, catRes, brandRes, banRes, faqRes, revRes]) => {
         if (prodRes.success) setProducts(prodRes.data || []);
         if (catRes.success) setCategories(catRes.data || []);
         if (brandRes.success) setBrands(brandRes.data || []);
         if (banRes.success) setBanners(banRes.data || []);
         if (faqRes.success) setFaqs(faqRes.data || []);
+        if (revRes && revRes.success) setReviews(revRes.data || []);
       })
       .catch((err) => console.error('Home data load error:', err))
       .finally(() => setIsLoading(false));
@@ -84,14 +91,27 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
 
   const flashSaleProducts = products.filter((p) => p.flashSale);
   const bestSellers = products.filter((p) => p.bestSeller);
+  const laptopProducts = products.filter((p) => p.categorySlug === 'laptops');
+  const componentProducts = products.filter((p) => p.categorySlug === 'pc-components');
+  const monitorProducts = products.filter((p) => p.categorySlug === 'monitors');
+  const customPcProducts = products.filter((p) => p.categorySlug === 'desktops');
+  const peripheralProducts = products.filter((p) => p.categorySlug === 'accessories');
+  const routerProducts = products.filter((p) => p.categorySlug === 'networking');
+
   const filteredTabProducts =
     activeTab === 'all'
       ? products
       : activeTab === 'laptops'
-      ? products.filter((p) => p.categorySlug === 'laptops')
+      ? laptopProducts
       : activeTab === 'components'
-      ? products.filter((p) => p.categorySlug === 'pc-components')
-      : products.filter((p) => p.categorySlug === 'accessories');
+      ? componentProducts
+      : activeTab === 'monitors'
+      ? monitorProducts
+      : activeTab === 'desktops'
+      ? customPcProducts
+      : activeTab === 'accessories'
+      ? peripheralProducts
+      : routerProducts;
 
   return (
     <div className="space-y-12 pb-16">
@@ -221,21 +241,28 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
               onClick={() => onNavigate(`/products?category=${cat.slug}`)}
               className="group bg-white border border-slate-200 rounded-2xl p-4 flex flex-col items-center text-center cursor-pointer hover:border-blue-500 hover:shadow-md transition-all duration-200"
             >
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-blue-50 flex items-center justify-center text-slate-700 group-hover:text-blue-600 transition-colors mb-3">
-                {cat.icon === 'Laptop' && <Laptop className="w-7 h-7" />}
-                {cat.icon === 'Cpu' && <Cpu className="w-7 h-7" />}
-                {cat.icon === 'Monitor' && <Monitor className="w-7 h-7" />}
-                {cat.icon === 'Keyboard' && <Headphones className="w-7 h-7" />}
-                {cat.icon !== 'Laptop' &&
-                  cat.icon !== 'Cpu' &&
-                  cat.icon !== 'Monitor' &&
-                  cat.icon !== 'Keyboard' && <Laptop className="w-7 h-7" />}
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-blue-50 flex items-center justify-center text-slate-700 group-hover:text-blue-600 transition-colors mb-2.5">
+                {cat.icon === 'Laptop' || cat.slug === 'laptops' ? (
+                  <Laptop className="w-7 h-7" />
+                ) : cat.icon === 'Cpu' || cat.slug === 'pc-components' ? (
+                  <Cpu className="w-7 h-7" />
+                ) : cat.icon === 'Monitor' || cat.slug === 'monitors' || cat.slug === 'desktops' ? (
+                  <Monitor className="w-7 h-7" />
+                ) : cat.icon === 'Wifi' || cat.slug === 'networking' ? (
+                  <Wifi className="w-7 h-7" />
+                ) : cat.icon === 'Keyboard' || cat.slug === 'accessories' ? (
+                  <Headphones className="w-7 h-7" />
+                ) : (
+                  <Package className="w-7 h-7" />
+                )}
               </div>
-              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1">
                 {cat.name}
               </h3>
-              <span className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                Explore <ArrowRight className="w-3 h-3" />
+              <span className="text-[11px] font-medium text-blue-600/80 mt-1">
+                {cat.productCount !== undefined && cat.productCount > 0
+                  ? `${cat.productCount} Products`
+                  : 'Browse Collection'}
               </span>
             </div>
           ))}
@@ -320,7 +347,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
             </p>
           </div>
 
-          {/* Interactive filter tabs (per frontend-design constitution) */}
+          {/* Interactive filter tabs */}
           <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl self-start sm:self-auto overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab('all')}
@@ -330,7 +357,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              All Gear
+              All Gear ({products.length})
             </button>
             <button
               onClick={() => setActiveTab('laptops')}
@@ -340,7 +367,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Laptops
+              Gaming & Work Laptops ({laptopProducts.length})
             </button>
             <button
               onClick={() => setActiveTab('components')}
@@ -350,7 +377,27 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Components
+              Processors & GPUs ({componentProducts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('desktops')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === 'desktops'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Custom PC Builds ({customPcProducts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('monitors')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === 'monitors'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Gaming Monitors ({monitorProducts.length})
             </button>
             <button
               onClick={() => setActiveTab('accessories')}
@@ -360,7 +407,17 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Peripherals
+              Keyboards & Mice ({peripheralProducts.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('networking')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                activeTab === 'networking'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Routers ({routerProducts.length})
             </button>
           </div>
         </div>
@@ -490,9 +547,21 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
               <button
                 key={brand.id}
                 onClick={() => onNavigate(`/products?brand=${brand.slug}`)}
-                className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-xs transition-all text-xs font-bold text-slate-700 hover:text-blue-600 cursor-pointer"
+                className="px-4 py-2 bg-white border border-slate-200 rounded-xl hover:border-blue-500 hover:shadow-xs transition-all text-xs font-bold text-slate-700 hover:text-blue-600 cursor-pointer flex items-center gap-2 group"
+                title={`Browse ${brand.name} official catalog`}
               >
-                {brand.name}
+                {brand.logo ? (
+                  <img
+                    src={brand.logo}
+                    alt={brand.name}
+                    className="h-5 w-auto max-w-16 object-contain grayscale group-hover:grayscale-0 transition-all"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <span>{brand.name}</span>
+                )}
               </button>
             ))}
           </div>
@@ -564,42 +633,51 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onQuickView }) =
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-1 text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                ))}
+            {(reviews.length > 0 ? reviews.slice(0, 3) : [
+              {
+                id: 'rev-def-1',
+                customerName: 'Tanvir Ahmed',
+                rating: 5,
+                comment: 'Bought an ASUS ROG Zephyrus G16 from Saturn Tech BD. The packaging was immaculate and delivery to GEC Chattogram was completed in just 3 hours. Best price in Bangladesh!',
+                isVerifiedPurchase: true,
+              },
+              {
+                id: 'rev-def-2',
+                customerName: 'Siam Chowdhury',
+                rating: 5,
+                comment: 'Built an RTX 4070 SUPER rig with their team. Flawless cable management, stress tested with benchmarks, and official warranty paperwork included. Highly recommended store!',
+                isVerifiedPurchase: true,
+              },
+              {
+                id: 'rev-def-3',
+                customerName: 'Farhanul Haque',
+                rating: 5,
+                comment: 'Ordered Samsung 990 Pro 1TB and Corsair DDR5 RAM online. Paid via SSLCOMMERZ with bKash smoothly. Courier arrived in Dhaka in under 24 hours. Excellent support.',
+                isVerifiedPurchase: true,
+              }
+            ]).map((rev) => (
+              <div key={rev.id} className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-1 text-amber-400">
+                  {[...Array(rev.rating)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-current" />
+                  ))}
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed italic">
+                  "{rev.comment}"
+                </p>
+                <div className="border-t border-slate-700/60 pt-2 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white">{rev.customerName}</span>
+                  {rev.isVerifiedPurchase && (
+                    <span className="text-[11px] text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Verified Buyer
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed italic">
-                "Bought an ASUS ROG Zephyrus G16 from Saturn Tech BD. The packaging was immaculate and delivery to GEC Chattogram was completed in just 3 hours. Best price in Bangladesh!"
-              </p>
-              <div className="border-t border-slate-700/60 pt-2 flex items-center justify-between text-xs">
-                <span className="font-semibold text-white">Tanvir Ahmed</span>
-                <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Verified Buyer
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-1 text-amber-400">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                ))}
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed italic">
-                "Built an RTX 4070 SUPER rig with their team. Flawless cable management, stress tested with benchmarks, and official warranty paperwork included. Highly recommended store!"
-              </p>
-              <div className="border-t border-slate-700/60 pt-2 flex items-center justify-between text-xs">
-                <span className="font-semibold text-white">Siam Chowdhury</span>
-                <span className="text-[11px] text-emerald-400 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Verified Buyer
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-1 text-amber-400">
+            ))}
+          </div>
+        </div>
+      </section>
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className="w-3.5 h-3.5 fill-current" />
                 ))}

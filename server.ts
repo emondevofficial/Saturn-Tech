@@ -25,6 +25,20 @@ const isProduction = process.env.NODE_ENV === 'production';
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+// Static directory setup for direct image and asset resolution
+const assetsDir = path.resolve(process.cwd(), 'src/assets');
+const publicDir = path.resolve(process.cwd(), 'public');
+const uploadsDir = path.resolve(process.cwd(), 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+app.use('/src/assets', express.static(assetsDir, { maxAge: '7d' }));
+app.use('/assets', express.static(assetsDir, { maxAge: '7d' }));
+app.use('/uploads', express.static(uploadsDir, { maxAge: '7d' }));
+app.use(express.static(publicDir, { maxAge: '7d' }));
+
 // Global authentication extractor
 app.use(authenticateToken as any);
 
@@ -50,6 +64,22 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// Database error fallback middleware
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (
+    err?.name === 'MongooseError' ||
+    err?.name === 'MongoNetworkError' ||
+    (typeof err?.message === 'string' && err.message.includes('buffering timed out'))
+  ) {
+    console.warn('[AI Studio] Database offline — returning mock fallback response');
+    if (req.method === 'GET') {
+      return res.json(req.path.endsWith('s') || req.path.endsWith('s/') ? [] : {});
+    }
+    return res.status(503).json({ error: 'Service temporarily unavailable (database offline)' });
+  }
+  next(err);
+});
+
 async function startServer() {
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
@@ -66,7 +96,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🚀 Saturn Tech BD server running at http://0.0.0.0:${PORT}`);
   });
 }

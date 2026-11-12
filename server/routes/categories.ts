@@ -4,9 +4,27 @@ import { db } from '../db';
 const router = Router();
 
 router.get('/', async (_req: Request, res: Response) => {
-  const categories = await db.getCategories();
+  const [categories, products] = await Promise.all([
+    db.getCategories(),
+    db.getProducts(),
+  ]);
   const active = categories.filter((c) => c.isActive);
-  res.json({ success: true, data: active });
+  const withCounts = active.map((c) => {
+    const cSlug = c.slug.toLowerCase();
+    const count = products.filter(
+      (p) =>
+        p.status === 'PUBLISHED' &&
+        (p.categorySlug.toLowerCase() === cSlug ||
+          p.category.toLowerCase() === c.name.toLowerCase() ||
+          (cSlug === 'pc-components' && p.categorySlug.toLowerCase() === 'components') ||
+          (cSlug === 'desktops' && p.categorySlug.toLowerCase() === 'custom-pc'))
+    ).length;
+    return {
+      ...c,
+      productCount: count,
+    };
+  });
+  res.json({ success: true, data: withCounts });
 });
 
 router.get('/:slug', async (req: Request, res: Response) => {

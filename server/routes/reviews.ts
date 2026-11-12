@@ -5,6 +5,23 @@ import { Review } from '../../src/types';
 
 const router = Router();
 
+// GET /api/reviews
+router.get('/', async (req: Request, res: Response) => {
+  const { productId, featured, limit } = req.query as Record<string, string>;
+  let reviews = await db.getReviews(productId);
+  let approved = reviews.filter((r) => r.isApproved);
+
+  if (featured === 'true') {
+    approved = approved.filter((r) => r.isFeatured || r.rating >= 4);
+  }
+
+  if (limit && !isNaN(Number(limit))) {
+    approved = approved.slice(0, Number(limit));
+  }
+
+  res.json({ success: true, data: approved });
+});
+
 // GET /api/reviews/:productId
 router.get('/:productId', async (req: Request, res: Response) => {
   const { productId } = req.params;
